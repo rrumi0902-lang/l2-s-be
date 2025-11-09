@@ -1,0 +1,12 @@
+# Python cache files
+__pycache__/
+*.pyc
+
+# Uploaded media files
+uploads
+
+# Environment variables
+.env
+
+# Idea project settings
+.idea
