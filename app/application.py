@@ -3,17 +3,16 @@ from app.middleware.cors import add_cors
 from app.middleware.session import add_session
 from app.middleware.static import add_static_file_serving
 from app.api.router import add_router
-from app.db.initialize import initialize_db
+from app.lifespan import lifespan
 
 application = FastAPI(
-    title="Long2Short FastAPI Service",
-    description="Semantic Video Summarization Pipeline Backend API documentation",
-    version="1.0.0"
+    title="L2S FastAPI Service",
+    description="Long2Short Backend API documentation",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 add_cors(application)
 add_session(application)
 add_static_file_serving(application)
 add_router(application)
-
-initialize_db()

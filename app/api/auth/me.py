@@ -1,27 +1,46 @@
 from fastapi import APIRouter, Request, HTTPException, status, Depends
-from app.model.user import UserModel
 from sqlalchemy.orm import Session
+from datetime import datetime
+from app.model.user import UserModel
+from app.model.session import SessionModel
 from app.db.dependency import get_db
 
 router = APIRouter(
     prefix="/auth",
-    tags=["Auth"])
-
+    tags=["Auth"]
+)
 
 @router.get("/me")
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
-    user_id = request.session.get("user_id")
-    if not user_id:
+    session_token = request.cookies.get("session_token")
+    if not session_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Require login"
         )
 
-    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    session = (
+        db.query(SessionModel)
+        .filter(SessionModel.session_token == session_token)
+        .first()
+    )
+
+    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid"
+        )
+
+    user = db.query(UserModel).filter(UserModel.id == session.user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
 
-    return {"user": {"email": user.email, "username": user.username}}
+    return {
+        "user": {
+            "email": user.email,
+            "username": user.username,
+        }
+    }
