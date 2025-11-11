@@ -1,6 +1,6 @@
 # ---- Base Stage ----
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
