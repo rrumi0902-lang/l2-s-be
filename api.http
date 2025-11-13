@@ -1,0 +1,63 @@
+### Variables
+@host = http://localhost
+@port = 8000
+@baseURL = {{host}}:{{port}}
+
+@email = user@example.com
+@username = testuser
+@password = testpassword
+
+### Health Check
+# Checks if the server is alive
+GET {{baseURL}}/health/alive
+
+###
+
+### Register a new user
+POST {{baseURL}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+
+### Login
+# @name login
+POST {{baseURL}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+### Get current user
+# Requires to be logged in. It will use the cookie from the login request.
+GET {{baseURL}}/auth/me
+
+###
+
+### Upload a file
+# Create a dummy file named 'sample.txt' in the same directory as this http file.
+POST {{baseURL}}/file/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="file"; filename="sample.txt"
+Content-Type: text/plain
+
+< ./sample.txt
+--boundary--
+
+###
+
+### Logout
+POST {{baseURL}}/auth/logout
+
+###

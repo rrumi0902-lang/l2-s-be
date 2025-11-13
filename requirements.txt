@@ -4,3 +4,5 @@ python-dotenv
 starlette
 sqlalchemy
 uvicorn
+itsdangerous
+python-multipart
