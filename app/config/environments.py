@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEFAULT_SESSION_EXPIRE_TIME = 60 * 60 * 6  # 6 Hour
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 8080
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
