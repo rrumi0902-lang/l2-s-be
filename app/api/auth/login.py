@@ -6,7 +6,13 @@ from app.model.user import UserModel
 from app.model.session import SessionModel
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
-from app.config.environments import SESSION_EXPIRE_TIME
+from app.config.environments import SESSION_EXPIRE_TIME, ENVIRONMENT
+
+COOKIE_SECURE = False
+COOKIE_SAMESITE = "lax"
+if ENVIRONMENT == "production":
+    COOKIE_SECURE = True
+    COOKIE_SAMESITE = "none"
 
 router = APIRouter(
     prefix="/auth",
@@ -32,8 +38,11 @@ async def login(
             detail="Id or password is not correct"
         )
 
+    db.query(SessionModel).filter(SessionModel.user_id == user.id).delete()
+    db.commit()
+
     session_token = str(uuid.uuid4())
-    expires_at = datetime.now(UTC) + timedelta(minutes=SESSION_EXPIRE_TIME)
+    expires_at = datetime.now(UTC) + timedelta(seconds=SESSION_EXPIRE_TIME)
 
     session = SessionModel(
         user_id=user.id,
@@ -48,8 +57,8 @@ async def login(
         value=session_token,
         httponly=True,
         max_age=SESSION_EXPIRE_TIME,
-        secure=False, #NO HTTPS TIL DOMAIN BUY
-        samesite="lax"
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE
     )
 
     return {"message": "Successfully logged in"}
