@@ -2,8 +2,8 @@ from fastapi import APIRouter, UploadFile, File
 import os, shutil
 
 router = APIRouter(
-    prefix="/file",
-    tags=["File"])
+    prefix="/video",
+    tags=["Video"])
 
 BASE_DIR = (
     os.path.dirname(

@@ -1,5 +1,5 @@
 from app.api.health import healthcheck
-from app.api.file import upload
+from app.api.video import upload
 from app.api.auth import (register, login, logout, withdraw, me)
 from app.api.admin import forceLogout
 
