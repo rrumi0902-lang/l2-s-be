@@ -3,6 +3,7 @@ from datetime import datetime, UTC
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.model.session import SessionModel
+from app.config.environments import SESSION_EXPIRE_TIME
 
 
 def cleanup_expired_sessions(db: Session):
@@ -18,7 +19,7 @@ def cleanup_expired_sessions(db: Session):
     return count
 
 
-SESSION_CLEANER_INTERVAL = 60 * 10 # 10 minutes
+SESSION_CLEANER_INTERVAL = SESSION_EXPIRE_TIME
 
 
 def session_cleanup_worker():

@@ -14,3 +14,4 @@ if not SECRET_KEY:
 SESSION_EXPIRE_TIME = int(os.getenv("SESSION_EXPIRE_TIME", DEFAULT_SESSION_EXPIRE_TIME))
 PORT = int(os.getenv("PORT", DEFAULT_PORT))
 ENVIRONMENT = os.getenv("ENVIRONMENT", DEFAULT_ENVIRONMENT)
+ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")]
