@@ -22,11 +22,13 @@ uvicorn main:app --reload
 python main.py
 ```
 
+### Docker
+
 Build and run it from the container as:
 
 ```bash
-docker build -t l2s-be .
-docker run -p 8080:8080 -v .:/app --env-file .env l2s-be
+docker build -t clap-be .
+docker run -p 8000:8000 --env-file .env clap-be
 ```
 
 ## Backend Description
@@ -63,7 +65,7 @@ SECRET_KEY='<key>'
 
 1. Using docs
 
-The easiest way to test is by accessing the API documentation at `https://localhost:<PORT_NUMBER>/docs` and 
+The easiest way to test is by accessing the API documentation at `https://localhost:<PORT_NUMBER>/docs` and press `Try it out`.
 
 
 2. HTTP File
@@ -89,5 +91,4 @@ OpenAPI documentation can be accessed by entering:
 
 ```
 https://localhost:<PORT_NUMBER>/docs
-
 ```
