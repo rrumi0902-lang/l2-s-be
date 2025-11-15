@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.model.user import UserModel
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
+from app.utility.security import hash_password
 
 router = APIRouter(
     prefix="/auth",
@@ -24,10 +25,13 @@ async def register(data: RegisterModel, db: Session = Depends(get_db)):
             detail="User already exists"
         )
 
+    print(data.password)
+    hashed_pw = hash_password(data.password)
+
     new_user = UserModel(
         email=data.email,
         username=data.username,
-        password=data.password,
+        password=hashed_pw,
     )
 
     db.add(new_user)

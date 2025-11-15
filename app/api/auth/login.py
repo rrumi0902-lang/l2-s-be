@@ -7,6 +7,7 @@ from app.model.session import SessionModel
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
 from app.config.environments import SESSION_EXPIRE_TIME, ENVIRONMENT
+from app.utility.security import verify_password
 
 COOKIE_SECURE = False
 COOKIE_SAMESITE = "lax"
@@ -32,7 +33,7 @@ async def login(
     db: Session = Depends(get_db)
 ):
     user = db.query(UserModel).filter(UserModel.email == data.email).first()
-    if not user or user.password != data.password:
+    if not user or not verify_password(data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Id or password is not correct"
