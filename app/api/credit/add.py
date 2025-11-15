@@ -1,17 +1,22 @@
+from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
-from app.model.user import UserModel
-from app.model.session import SessionModel
 from app.db.dependency import get_db
+from app.model.session import SessionModel
+from app.model.user import  UserModel
+from pydantic import BaseModel
 
 router = APIRouter(
-    prefix="/auth",
-    tags=["Auth"]
-)
+    prefix="/credit",
+    tags=["Credit"])
 
-@router.get("/me")
-async def get_current_user(request: Request, db: Session = Depends(get_db)):
+
+class CreditAddRequest(BaseModel):
+    amount: int
+
+
+@router.post("/add")
+async def add(request: Request, data: CreditAddRequest, db: Session = Depends(get_db)):
     session_token = request.cookies.get("session_token")
     if not session_token:
         raise HTTPException(
@@ -38,10 +43,10 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
             detail="User not found"
         )
 
-    return {
-        "user": {
-            "email": user.email,
-            "username": user.username,
-            "credit": user.credit,
-        }
-    }
+    # Paypal later
+
+    user.credit += data.amount
+    db.commit()
+    db.refresh(user)
+
+    return {"message": f"{data.amount} credit has been added.", "total_credit": user.credit}

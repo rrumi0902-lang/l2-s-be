@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, text
 from app.db.database import Base
 
 class UserModel(Base):
@@ -8,3 +8,4 @@ class UserModel(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
+    credit = Column(Integer, nullable=False, server_default=text("0"))

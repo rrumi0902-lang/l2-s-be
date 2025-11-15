@@ -31,6 +31,7 @@ async def register(data: RegisterModel, db: Session = Depends(get_db)):
         email=data.email,
         username=data.username,
         password=hashed_pw,
+        credit=0
     )
 
     db.add(new_user)
