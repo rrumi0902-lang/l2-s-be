@@ -25,7 +25,6 @@ async def register(data: RegisterModel, db: Session = Depends(get_db)):
             detail="User already exists"
         )
 
-    print(data.password)
     hashed_pw = hash_password(data.password)
 
     new_user = UserModel(
