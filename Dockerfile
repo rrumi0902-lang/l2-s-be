@@ -9,11 +9,22 @@ ENV PYTHONUNBUFFERED=1
 # Set the working directory in the container
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    nodejs \
-    npm \
-    && rm -rf /var/lib/apt/lists/*
+# --- Install system dependencies in steps for robustness ---
+
+# Step 1: Update and install base build tools + ffmpeg
+RUN apt-get update && \
+    apt-get install -y curl ca-certificates gnupg build-essential ffmpeg --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+# Step 2: Add NodeSource repository for Node.js with proper key setup
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list
+
+# Step 3: Install Node.js
+RUN apt-get update && \
+    apt-get install -y nodejs --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # ---- Builder Stage ----
 FROM base AS builder
