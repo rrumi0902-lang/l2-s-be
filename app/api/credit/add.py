@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
@@ -30,7 +30,7 @@ async def add(request: Request, data: CreditAddRequest, db: Session = Depends(ge
         .first()
     )
 
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

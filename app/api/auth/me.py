@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, UTC
 from app.model.user import UserModel
 from app.model.session import SessionModel
 from app.db.dependency import get_db
@@ -25,7 +25,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         .first()
     )
 
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

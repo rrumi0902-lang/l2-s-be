@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Request, HTTPException, status, Depends, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.video import VideoModel
 from app.model.user import UserModel
-from datetime import datetime
-from pathlib import Path
-import os
+from datetime import datetime, UTC
+
+from app.utility.storage import create_signed_url
 
 router = APIRouter(
     prefix="/video",
@@ -28,7 +28,7 @@ async def download_video(
         )
 
     session = db.query(SessionModel).filter(SessionModel.session_token == session_token).first()
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"
@@ -48,25 +48,19 @@ async def download_video(
             detail="Video not found"
         )
 
-    # Check if user owns this video
     if video.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to download this video"
         )
 
-    # Check if file exists
-    if not os.path.exists(video.file_path):
+    try:
+        filename = video.file_path.split("/")[-1]
+        signed_url = await create_signed_url(filename, expires_in=3600)
+        return RedirectResponse(url=signed_url)
+
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Video file not found on server"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate download link: {str(e)}"
         )
-
-    # Get filename from path
-    filename = Path(video.file_path).name
-
-    return FileResponse(
-        path=video.file_path,
-        filename=filename,
-        media_type="application/octet-stream"
-    )

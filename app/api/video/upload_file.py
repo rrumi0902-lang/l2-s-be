@@ -6,7 +6,8 @@ from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.video import VideoModel
 from app.model.user import UserModel
-from datetime import datetime
+from datetime import datetime, UTC
+from app.utility.storage import upload_to_supabase_storage
 
 router = APIRouter(
     prefix="/video",
@@ -27,7 +28,7 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
         )
 
     session = db.query(SessionModel).filter(SessionModel.session_token == session_token).first()
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"
@@ -42,14 +43,22 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
 
     file_extension = Path(file.filename).suffix
     unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = UPLOAD_DIR / unique_filename
 
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        file_url = await upload_to_supabase_storage(
+            file=file,
+            filename=unique_filename,
+            bucket="videos"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
+        )
 
     video = VideoModel(
         user_id=user.id,
-        file_path=str(file_path),
+        file_path=str(file_url),
         youtube_id=None
     )
     db.add(video)

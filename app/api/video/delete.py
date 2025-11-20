@@ -4,8 +4,8 @@ from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.video import VideoModel
 from app.model.user import UserModel
-from datetime import datetime
-import os
+from datetime import datetime, UTC
+from app.utility.storage import delete_from_supabase_storage
 
 router = APIRouter(
     prefix="/video",
@@ -22,7 +22,7 @@ async def delete_video(id: int, request: Request, db: Session = Depends(get_db))
         )
 
     session = db.query(SessionModel).filter(SessionModel.session_token == session_token).first()
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"
@@ -49,13 +49,11 @@ async def delete_video(id: int, request: Request, db: Session = Depends(get_db))
             detail="You don't have permission to delete this video"
         )
 
-    # Delete the file from filesystem if it exists
-    if os.path.exists(video.file_path):
-        try:
-            os.remove(video.file_path)
-        except Exception as e:
-            # Log the error but continue with database deletion
-            print(f"Error deleting file {video.file_path}: {str(e)}")
+    try:
+        await delete_from_supabase_storage(video.file_path)
+    except Exception as e:
+        # Log the error but continue with database deletion
+        print(f"Error deleting file from Supabase Storage: {str(e)}")
 
     # Delete the video record from database
     db.delete(video)

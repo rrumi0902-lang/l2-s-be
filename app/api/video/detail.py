@@ -4,7 +4,7 @@ from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.video import VideoModel
 from app.model.user import UserModel
-from datetime import datetime
+from datetime import datetime, UTC
 
 router = APIRouter(
     prefix="/video",
@@ -21,7 +21,7 @@ async def get_video_detail(id: int, request: Request, db: Session = Depends(get_
         )
 
     session = db.query(SessionModel).filter(SessionModel.session_token == session_token).first()
-    if not session or (session.expires_at and session.expires_at < datetime.utcnow()):
+    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"
