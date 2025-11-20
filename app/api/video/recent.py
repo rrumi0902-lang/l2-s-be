@@ -48,6 +48,7 @@ async def get_recent_videos(
                 "user_id": video.user_id,
                 "youtube_id": video.youtube_id,
                 "file_path": video.file_path,
+                "thumbnail_path": video.thumbnail_path
             }
             for video in videos
         ],

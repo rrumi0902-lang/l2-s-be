@@ -8,3 +8,4 @@ class VideoModel(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     youtube_id = Column(String, nullable=True)
     file_path = Column(String, nullable=False)
+    thumbnail_path = Column(String, nullable=True)

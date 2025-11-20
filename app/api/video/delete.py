@@ -49,17 +49,24 @@ async def delete_video(id: int, request: Request, db: Session = Depends(get_db))
             detail="You don't have permission to delete this video"
         )
 
+    # Delete the video file from Supabase Storage
     try:
-        await delete_from_supabase_storage(video.file_path)
+        await delete_from_supabase_storage(video.file_path, bucket="videos")
     except Exception as e:
-        # Log the error but continue with database deletion
-        print(f"Error deleting file from Supabase Storage: {str(e)}")
+        print(f"Error deleting video file from Supabase Storage: {str(e)}")
+
+    # Delete the thumbnail from Supabase Storage
+    if video.thumbnail_path:
+        try:
+            await delete_from_supabase_storage(video.thumbnail_path, bucket="thumbnails")
+        except Exception as e:
+            print(f"Error deleting thumbnail from Supabase Storage: {str(e)}")
 
     # Delete the video record from database
     db.delete(video)
     db.commit()
 
     return {
-        "message": "Video deleted successfully",
+        "message": "Video and thumbnail deleted successfully",
         "video_id": id
     }

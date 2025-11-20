@@ -9,15 +9,13 @@ from app.model.user import UserModel
 from datetime import datetime, UTC
 from app.utility.youtube import download_youtube_video
 from app.utility.storage import upload_file_to_supabase_storage
-import tempfile, os
+from app.utility.video import generate_thumbnail
+import tempfile, os, uuid
 
 router = APIRouter(
     prefix="/video",
     tags=["Video"]
 )
-
-UPLOAD_DIR = Path(__file__).resolve().parents[3] / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 class YouTubeUploadRequest(BaseModel):
@@ -52,20 +50,48 @@ async def upload_youtube_video(request: Request, data: YouTubeUploadRequest, db:
     try:
         file_path, video_title = download_youtube_video(data.youtube_id, Path(temp_dir))
 
-        # Upload to Supabase Storage
-        filename = Path(file_path).name
+        # Create UUID-based filename (preserve extension)
+        video_uuid = uuid.uuid4()
+        original_suffix = Path(file_path).suffix  # e.g. .mp4
+        unique_filename = f"{video_uuid}{original_suffix}"
+
         with open(file_path, 'rb') as f:
             file_content = f.read()
 
+        # Upload video to Supabase Storage
         file_url = await upload_file_to_supabase_storage(
             file_content=file_content,
-            filename=filename,
+            filename=unique_filename,
             content_type="video/mp4",
             bucket="videos"
         )
 
-        # Clean up temporary file
+        # Generate thumbnail
+        thumbnail_filename = f"{video_uuid}.jpg"
+        thumbnail_path = os.path.join(temp_dir, thumbnail_filename)
+
+        thumbnail_generated = generate_thumbnail(
+            video_path=file_path,
+            output_path=thumbnail_path,
+            timestamp="00:00:01"
+        )
+
+        thumbnail_url = None
+        if thumbnail_generated and os.path.exists(thumbnail_path):
+            with open(thumbnail_path, 'rb') as thumb_file:
+                thumbnail_content = thumb_file.read()
+
+            thumbnail_url = await upload_file_to_supabase_storage(
+                file_content=thumbnail_content,
+                filename=thumbnail_filename,
+                content_type="image/jpeg",
+                bucket="thumbnails"
+            )
+
+        # Clean up temporary files
         os.remove(file_path)
+        if os.path.exists(thumbnail_path):
+            os.remove(thumbnail_path)
         os.rmdir(temp_dir)
 
     except ValueError as e:
@@ -87,7 +113,8 @@ async def upload_youtube_video(request: Request, data: YouTubeUploadRequest, db:
     # Save to database
     video = VideoModel(
         user_id=user.id,
-        file_path=file_url,  # Store Supabase Storage URL
+        file_path=file_url,
+        thumbnail_path=thumbnail_url,
         youtube_id=data.youtube_id
     )
     db.add(video)
@@ -97,5 +124,6 @@ async def upload_youtube_video(request: Request, data: YouTubeUploadRequest, db:
     return {
         "message": f"YouTube video '{video_title}' downloaded and uploaded successfully!",
         "video_id": video.id,
-        "file_url": file_url
+        "video_url": file_url,
+        "thumbnail_url": thumbnail_url
     }
