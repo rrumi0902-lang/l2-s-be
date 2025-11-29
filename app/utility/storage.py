@@ -48,8 +48,8 @@ async def upload_to_supabase_storage(
         raise Exception(f"Failed to upload to Supabase Storage: {str(e)}")
 
 
-async def upload_file_to_supabase_storage(
-        file_content: bytes,
+def upload_file_to_supabase_storage(
+        file,
         filename: str,
         content_type: str = "application/octet-stream",
         bucket: str = "videos"
@@ -73,7 +73,7 @@ async def upload_file_to_supabase_storage(
         # Upload to Supabase Storage
         response = supabase.storage.from_(bucket).upload(
             path=filename,
-            file=file_content,
+            file=file,
             file_options={
                 "content-type": content_type,
                 "upsert": "false"  # Don't overwrite existing files
