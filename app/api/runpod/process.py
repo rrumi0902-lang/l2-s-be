@@ -11,18 +11,19 @@ import requests
 from app.api.router_base import router_runpod as router
 
 
-class InputModel(BaseModel):
-    video_url: str
-
-
 class OptionsModel(BaseModel):
     language: str
-    method: Literal["llm", "echofusion"]
+    method: Literal["llm_only", "echofusion"]
+
+class InputModel(BaseModel):
+    job_id: str | None = None
+    task: Literal["process_video", "generate_thumbnail"]
+    video_url: str
+    options: OptionsModel
 
 
 class DataModel(BaseModel):
     input: InputModel
-    options: OptionsModel
 
 
 class RunpodRequest(BaseModel):

@@ -8,8 +8,10 @@ from app.model.video import VideoModel
 from app.model.user import UserModel
 from datetime import datetime, UTC
 from app.utility.storage import upload_file_to_supabase_storage
+from app.config.environments import RUNPOD_URL, RUNPOD_API_KEY
 from app.api.router_base import router_video as router
 from fastapi.concurrency import run_in_threadpool
+import requests
 
 
 @router.post("/upload/file")
@@ -38,7 +40,6 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
     file_extension = Path(file.filename).suffix
     video_uuid = str(uuid.uuid4())
     unique_filename = f"{video_uuid}{file_extension}"
-    thumbnail_filename = f"{video_uuid}.jpg"
 
     # Create temporary directory for processing
     temp_dir = tempfile.mkdtemp()
@@ -60,6 +61,21 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
                 content_type=file.content_type
             )
 
+        requests.post(
+            url=f"{RUNPOD_URL}/run",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {RUNPOD_API_KEY}"
+            },
+            json={
+                "input": {
+                    "job_id": video_uuid,
+                    "task": "generate_thumbnail",
+                    "video_url": file_url
+                }
+            }
+        )
+
     except Exception as e:
         # Clean up temporary files
         if os.path.exists(temp_dir):
@@ -77,12 +93,22 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
             import shutil
             shutil.rmtree(temp_dir)
 
+
+    thumbnail_url = file_url.replace("/videos/", "/thumbnails/")
+    if thumbnail_url.endswith(".mp4"):
+        thumbnail_url = thumbnail_url[:-4] + ".jpg"
+
+    result_url = file_url.replace("/videos/", "/outputs/")
+    if result_url.endswith(".mp4"):
+        result_url = result_url[:-4]
+
     # Save to database
     video = VideoModel(
         user_id=user.id,
         file_path=str(file_url),
-        thumbnail_path=None,
-        youtube_id=None
+        thumbnail_path=thumbnail_url,
+        youtube_id=None,
+        result_path=result_url
     )
     db.add(video)
     db.commit()
@@ -92,5 +118,5 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
         "message": f"File '{file.filename}' uploaded successfully!",
         "video_id": video.id,
         "video_url": file_url,
-        "thumbnail_url": None
+        "thumbnail_url": thumbnail_url,
     }

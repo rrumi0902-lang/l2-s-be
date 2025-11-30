@@ -40,7 +40,8 @@ async def get_my_videos(request: Request, db: Session = Depends(get_db)):
                 "user_id": video.user_id,
                 "youtube_id": video.youtube_id,
                 "file_path": video.file_path,
-                "thumbnail_path": video.thumbnail_path
+                "thumbnail_path": video.thumbnail_path,
+                "result_path": video.result_path,
             }
             for video in videos
         ],
