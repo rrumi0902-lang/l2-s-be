@@ -26,3 +26,7 @@ RUNPOD_URL = os.getenv("RUNPOD_URL")
 RUNPOD_API_KEY = os.getenv("RUNPOD_API_KEY")
 if not all([RUNPOD_URL, RUNPOD_API_KEY]):
     raise RuntimeError("RUNPOD related environment variable is missing! Set it in your .env file.")
+
+BACKEND_URL = os.getenv("BACKEND_URL")
+if not BACKEND_URL:
+    raise RuntimeError("No backend url")

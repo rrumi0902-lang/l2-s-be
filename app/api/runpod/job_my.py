@@ -1,19 +1,15 @@
-from fastapi import Request, HTTPException, status, Depends, Query
+from fastapi import Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
 from app.model.session import SessionModel
-from app.model.video import VideoModel
 from app.model.user import UserModel
+from app.model.job import JobModel
 from datetime import datetime, UTC
-from app.api.router_base import router_video as router
+from app.api.router_base import router_runpod as router
 
 
-@router.get("/recent")
-async def get_recent_videos(
-    request: Request,
-    limit: int = Query(default=10, ge=1, le=100),
-    db: Session = Depends(get_db)
-):
+@router.get("/job/my")
+async def get_job_my(request: Request, db: Session = Depends(get_db)):
     session_token = request.cookies.get("session_token")
     if not session_token:
         raise HTTPException(
@@ -35,19 +31,15 @@ async def get_recent_videos(
             detail="User not found"
         )
 
-    # Get recent videos from all users, ordered by ID (most recent first)
-    videos = db.query(VideoModel).order_by(VideoModel.id.desc()).limit(limit).all()
+    jobs = db.query(JobModel).filter(JobModel.user_id == user.id).all()
+    jobs_data = [
+        {
+            "job_id": job.id,
+            "video_id": job.video_id,
+            "method": job.method,
+            "status": job.status.value if hasattr(job.status, "value") else job.status,
+        }
+        for job in jobs
+    ]
 
-    return {
-        "videos": [
-            {
-                "id": video.id,
-                "user_id": video.user_id,
-                "youtube_id": video.youtube_id,
-                "file_path": video.file_path,
-                "thumbnail_path": video.thumbnail_path
-            }
-            for video in videos
-        ],
-        "total": len(videos)
-    }
+    return { "jobs": jobs_data }
