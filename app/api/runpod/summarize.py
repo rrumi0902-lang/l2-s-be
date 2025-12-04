@@ -70,7 +70,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: Session = Depe
             },
             json={
                 "input": {
-                    "webhook_url": f"{BACKEND_URL}/runpod/webhook",
+                    "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
                     "job_id": os.path.splitext(video.file_path.split('/')[-1])[0],
                     "task": "process_video",
                     "video_url": video.file_path,

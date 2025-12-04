@@ -6,8 +6,8 @@ from datetime import datetime, UTC
 from app.api.router_base import router_runpod as router
 
 
-@router.post("/webhook")
-async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
+@router.post("/webhook/{job_id}")
+async def runpod_webhook(job_id: str, request: Request, db: Session = Depends(get_db)):
     """
     Webhook endpoint for RunPod to notify us when a job is completed or failed
     This endpoint does NOT require authentication as it's called by RunPod
@@ -15,7 +15,7 @@ async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         payload = await request.json()
 
-        job_id = payload.get("job_id")
+        assigned_job_id = payload.get("job_id")
         status = payload.get("status")  # "completed" or "failed"
         result_url = payload.get("result_url")
         error = payload.get("error")
@@ -27,7 +27,7 @@ async def runpod_webhook(request: Request, db: Session = Depends(get_db)):
             )
 
         # Find job in database
-        job = db.query(JobModel).filter(JobModel.job_id == job_id).first()
+        job = db.query(JobModel).filter(JobModel.id == job_id).first()
         if not job:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
