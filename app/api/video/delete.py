@@ -60,9 +60,9 @@ async def delete_video(id: int, request: Request, db: Session = Depends(get_db))
 
     # Delete related job result files from storage and jobs from database
     for job in related_jobs:
-        if job.result_path:
+        if job.result_url:
             try:
-                await delete_from_supabase_storage(job.result_path, bucket="outputs")
+                await delete_from_supabase_storage(job.result_url, bucket="outputs")
             except Exception as e:
                 print(f"Error deleting job result file from Supabase Storage: {str(e)}")
 
