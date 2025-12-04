@@ -98,17 +98,12 @@ async def upload_file(request: Request, file: UploadFile = File(...), db: Sessio
     if thumbnail_url.endswith(".mp4"):
         thumbnail_url = thumbnail_url[:-4] + ".jpg"
 
-    result_url = file_url.replace("/videos/", "/outputs/")
-    if result_url.endswith(".mp4"):
-        result_url = result_url[:-4]
-
     # Save to database
     video = VideoModel(
         user_id=user.id,
         file_path=str(file_url),
         thumbnail_path=thumbnail_url,
-        youtube_id=None,
-        result_path=result_url
+        youtube_id=None
     )
     db.add(video)
     db.commit()
