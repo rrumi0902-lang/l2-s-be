@@ -1,10 +1,9 @@
-from fastapi import Request, HTTPException, status, Depends, Query
+from fastapi import Request, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.dependency import get_db
-from app.model.session import SessionModel
-from app.model.video import VideoModel
+from app.model.job import JobModel
 from app.model.user import UserModel
-from datetime import datetime, UTC
+from app.model.video import VideoModel
 from app.api.router_base import router_video as router
 
 
@@ -14,40 +13,21 @@ async def get_recent_videos(
     limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    session_token = request.cookies.get("session_token")
-    if not session_token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Login required"
-        )
-
-    session = db.query(SessionModel).filter(SessionModel.session_token == session_token).first()
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired or invalid"
-        )
-
-    user = db.query(UserModel).filter(UserModel.id == session.user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-
-    # Get recent videos from all users, ordered by ID (most recent first)
-    videos = db.query(VideoModel).order_by(VideoModel.id.desc()).limit(limit).all()
+    jobs = db.query(JobModel).order_by(JobModel.created_at).limit(limit).all()
+    jobs_data = []
+    for job in jobs:
+        if job.status == "completed":
+            user = db.query(UserModel).filter(UserModel.id == job.user_id).first()
+            video = db.query(VideoModel).filter(VideoModel.id == job.video_id).first()
+            jobs_data.append({
+                "id": job.id,
+                "user": user.username,
+                "method": job.method,
+                "result_url": job.result_url,
+                "thumbnail_path": video.thumbnail_path,
+            })
 
     return {
-        "videos": [
-            {
-                "id": video.id,
-                "user_id": video.user_id,
-                "youtube_id": video.youtube_id,
-                "file_path": video.file_path,
-                "thumbnail_path": video.thumbnail_path
-            }
-            for video in videos
-        ],
-        "total": len(videos)
+        "videos": jobs_data,
+        "total": len(jobs_data)
     }
