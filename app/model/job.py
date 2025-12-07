@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum, Boolean
 from datetime import datetime, UTC
 from app.db.database import Base
 import enum
@@ -21,6 +21,8 @@ class JobModel(Base):
     video_id = Column(Integer, ForeignKey("videos.id"), nullable=False)
     status = Column(Enum(JobStatus), nullable=False, default=JobStatus.PENDING)
     method = Column(String, nullable=True)  # "llm_only" or "echofusion"
+    subtitle = Column(Boolean, nullable=False, default=False)
+    vertical = Column(Boolean, nullable=False, default=False)
     result_url = Column(String, nullable=True)
     error_message = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))

@@ -23,6 +23,8 @@ async def get_recent_videos(
                 "id": job.id,
                 "user": user.username,
                 "method": job.method,
+                "subtitle": job.subtitle,
+                "vertical": job.vertical,
                 "result_url": job.result_url,
                 "thumbnail_path": video.thumbnail_path,
             })

@@ -37,6 +37,8 @@ async def get_job_my(request: Request, db: Session = Depends(get_db)):
             "job_id": job.id,
             "video_id": job.video_id,
             "method": job.method,
+            "subtitle": job.subtitle,
+            "vertical": job.vertical,
             "status": job.status.value if hasattr(job.status, "value") else job.status,
             "name": job.name
         }

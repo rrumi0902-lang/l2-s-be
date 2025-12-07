@@ -50,6 +50,8 @@ async def get_job_status(job_id: str, request: Request, db: Session = Depends(ge
         "video_id": job.video_id,
         "status": job.status,
         "method": job.method,
+        "subtitle": job.subtitle,
+        "vertical": job.vertical,
         "result_url": job.result_url,
         "error_message": job.error_message,
         "created_at": job.created_at.isoformat() if job.created_at else None,

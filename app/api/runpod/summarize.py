@@ -49,10 +49,10 @@ async def summarize(request: Request, body: SummarizeRequest, db: Session = Depe
         )
 
     video = db.query(VideoModel).filter(VideoModel.id == body.video_id).first()
-    if not user:
+    if not video:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="VIdeo not found"
+            detail="Video not found"
         )
     
     # Create job record in database
@@ -61,6 +61,8 @@ async def summarize(request: Request, body: SummarizeRequest, db: Session = Depe
         video_id=video.id,
         method=body.method,
         status=JobStatus.PENDING,
+        subtitle=body.subtitle,
+        vertical=body.vertical,
     )
     db.add(job)
     db.commit()
@@ -80,7 +82,9 @@ async def summarize(request: Request, body: SummarizeRequest, db: Session = Depe
                     "task": "process_video",
                     "video_url": video.file_path,
                     "options": {
-                        "method": body.method
+                        "method": body.method,
+                        "vertical_export": body.vertical,
+                        "subtitles": body.subtitle,
                     }
                 }
             },
