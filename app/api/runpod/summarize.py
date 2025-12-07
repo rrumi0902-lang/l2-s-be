@@ -83,8 +83,8 @@ async def summarize(request: Request, body: SummarizeRequest, db: Session = Depe
                     "video_url": video.file_path,
                     "options": {
                         "method": body.method,
-                        "vertical_export": body.vertical,
-                        "subtitles": body.subtitle,
+                        "vertical": body.vertical,
+                        "subtitle": body.subtitle,
                     }
                 }
             },
