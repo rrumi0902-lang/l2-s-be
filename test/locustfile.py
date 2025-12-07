@@ -1,76 +1,74 @@
 import random
 import string
+import time
 from locust import HttpUser, task, between, SequentialTaskSet
 
 
 def random_string(length=8):
-    """랜덤 문자열 생성 (아이디/비번용)"""
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(length))
 
 
 class UserScenario(SequentialTaskSet):
-    """
-    가입 -> 활동(조회/충전) -> 탈퇴 시나리오
-    영상 업로드 같은 무거운 작업은 제외하고 부하가 적은 조회 위주로 구성됨
-    """
 
     def on_start(self):
-        """1. 회원가입 및 로그인"""
+        """
+        시나리오 시작 전 가입/로그인.
+        서버가 죽어있으면(500+) 잠시 쉬었다가 다시 시도하도록 방어 로직 추가.
+        """
         self.email = f"{random_string()}@example.com"
         self.password = "testpass123"
         self.username = f"user_{random_string(4)}"
 
-        # 회원가입
-        self.client.post("/auth/register", json={
+        # 1. 회원가입 (실패 시 대기 로직 추가)
+        with self.client.post("/auth/register", json={
             "email": self.email,
             "username": self.username,
             "password": self.password
-        })
+        }, catch_response=True) as response:
+            if response.status_code >= 500:
+                print("!! Server Error during Register. Sleeping 10s...")
+                time.sleep(10)  # 서버가 살아날 시간을 줌
+                response.failure("Server Error")
+                self.interrupt()  # 시나리오 중단하고 다시 시작 (on_start 재진입)
+                return
 
-        # 로그인 (쿠키 자동 저장)
-        self.client.post("/auth/login", json={
+        # 2. 로그인
+        with self.client.post("/auth/login", json={
             "email": self.email,
             "password": self.password
-        })
+        }, catch_response=True) as response:
+            if response.status_code >= 500:
+                print("!! Server Error during Login. Sleeping 10s...")
+                time.sleep(10)
+                response.failure("Server Error")
+                self.interrupt()
+                return
 
     @task
     def browse_dashboard(self):
-        """2. 대시보드 진입 시 발생하는 조회 요청들"""
-        # 서버 상태 및 내 정보 확인
+        # API 호출 시에도 502가 뜨면 즉시 실패 처리되지만,
+        # TaskSet 흐름상 wait_time이 있어서 on_start만큼 위험하진 않습니다.
         self.client.get("/health/alive")
         self.client.get("/auth/me")
-
-        # 내 비디오 목록 확인 (업로드를 안 했으므로 빈 목록 예상)
         self.client.get("/video/my")
-
-        # 내 작업 목록 확인
         self.client.get("/runpod/job/my")
 
     @task
     def manage_credit(self):
-        """3. 크레딧 충전 테스트 (가벼운 트랜잭션)"""
-        # 크레딧 충전
         self.client.post("/credit/add", json={"amount": 100})
 
     @task
     def browse_recent_videos(self):
-        """4. 최신 영상 목록 조회 (메인 기능 테스트)"""
-        # 최근 완료된 영상 목록 조회 (limit 파라미터 랜덤 변경)
         limit = random.choice([5, 10, 20])
         self.client.get(f"/video/recent?limit={limit}")
 
     @task
     def cleanup_account(self):
-        """5. 시나리오 종료: 회원 탈퇴로 DB 정리"""
-        # 회원 탈퇴 (DB에서 유저 및 세션 삭제)
         self.client.delete("/auth/withdraw")
-
-        # 시나리오 종료
         self.interrupt()
 
 
 class WebsiteUser(HttpUser):
     tasks = [UserScenario]
-    # 실제 유저처럼 각 행동 사이에 1~3초 대기
     wait_time = between(1, 3)
