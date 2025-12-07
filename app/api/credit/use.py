@@ -7,6 +7,7 @@ from app.model.session import SessionModel
 from app.model.user import UserModel
 from pydantic import BaseModel
 from app.api.router_base import router_credit as router
+from app.utility.time import utc_now
 
 
 class CreditUseRequest(BaseModel):
@@ -27,7 +28,7 @@ async def use(request: Request, data: CreditUseRequest, db: AsyncSession = Depen
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

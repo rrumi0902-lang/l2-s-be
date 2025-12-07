@@ -7,6 +7,7 @@ from app.model.user import UserModel
 from app.model.job import JobModel
 from datetime import datetime, UTC
 from app.api.router_base import router_runpod as router
+from app.utility.time import utc_now
 
 
 @router.get("/job/my")
@@ -23,7 +24,7 @@ async def get_job_my(request: Request, db: AsyncSession = Depends(get_db)):
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

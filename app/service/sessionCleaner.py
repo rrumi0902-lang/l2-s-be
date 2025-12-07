@@ -4,13 +4,14 @@ from sqlalchemy import delete
 from app.db.database import AsyncSessionLocal
 from app.model.session import SessionModel
 from app.config.environments import SESSION_EXPIRE_TIME
+from app.utility.time import utc_now
 
 SESSION_CLEANER_INTERVAL = SESSION_EXPIRE_TIME
 
 
 async def cleanup_expired_sessions():
     async with AsyncSessionLocal() as db:
-        now = datetime.now(UTC)
+        now = utc_now()
         result = await db.execute(
             delete(SessionModel).where(
                 SessionModel.expires_at != None,

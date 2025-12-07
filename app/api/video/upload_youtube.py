@@ -7,7 +7,7 @@ from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.video import VideoModel
 from app.model.user import UserModel
-from datetime import datetime, UTC
+from app.utility.time import utc_now
 from app.utility.youtube import download_youtube_video
 from app.utility.storage import upload_file_to_supabase_storage
 from app.utility.video import generate_thumbnail
@@ -33,7 +33,7 @@ async def upload_youtube_video(request: Request, data: YouTubeUploadRequest, db:
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

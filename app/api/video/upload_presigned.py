@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.db.dependency import get_db
 from app.model.session import SessionModel
 from app.model.user import UserModel
-from datetime import datetime, UTC
+from app.utility.time import utc_now
 from app.config.environments import SUPABASE_PROJECT_URL, SUPABASE_SERVICE_KEY
 from app.api.router_base import router_video as router
 import requests
@@ -28,7 +28,7 @@ async def upload_presigned(
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(status_code=401, detail="Session expired or invalid")
 
     result = await db.execute(

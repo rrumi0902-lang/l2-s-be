@@ -13,6 +13,8 @@ from app.config.environments import RUNPOD_URL, RUNPOD_API_KEY, BACKEND_URL
 from app.api.router_base import router_runpod as router
 import requests
 
+from app.utility.time import utc_now
+
 
 class SummarizeRequest(BaseModel):
     video_id: int
@@ -35,7 +37,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"
@@ -109,7 +111,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
         if "id" in runpod_response:
             job.runpod_job_id = runpod_response["id"]
             job.status = JobStatus.PROCESSING
-            job.started_at = datetime.now(UTC)
+            job.started_at = utc_now()
             job.name = f"Job {runpod_response['id'][:4]}"
             await db.commit()
 

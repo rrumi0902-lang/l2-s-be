@@ -7,7 +7,7 @@ from app.model.session import SessionModel
 from app.model.user import UserModel
 from app.config.environments import ENVIRONMENT
 from app.api.router_base import router_auth as router
-
+from app.utility.time import utc_now
 
 COOKIE_SECURE = False
 COOKIE_SAMESITE = "lax"
@@ -30,7 +30,7 @@ async def withdraw(request: Request, response: Response, db: AsyncSession = Depe
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

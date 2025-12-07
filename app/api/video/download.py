@@ -9,6 +9,7 @@ from app.model.user import UserModel
 from datetime import datetime, UTC
 from app.utility.storage import create_signed_url
 from app.api.router_base import router_video as router
+from app.utility.time import utc_now
 
 
 @router.get("/download")
@@ -29,7 +30,7 @@ async def download_video(
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

@@ -10,6 +10,7 @@ from app.db.dependency import get_db
 from app.config.environments import SESSION_EXPIRE_TIME, ENVIRONMENT
 from app.utility.security import verify_password
 from app.api.router_base import router_auth as router
+from app.utility.time import utc_now
 
 COOKIE_SECURE = False
 COOKIE_SAMESITE = "lax"
@@ -43,7 +44,7 @@ async def login(
     await db.commit()
 
     session_token = str(uuid.uuid4())
-    expires_at = datetime.now(UTC) + timedelta(seconds=SESSION_EXPIRE_TIME)
+    expires_at = utc_now() + timedelta(seconds=SESSION_EXPIRE_TIME)
 
     session = SessionModel(
         user_id=user.id,

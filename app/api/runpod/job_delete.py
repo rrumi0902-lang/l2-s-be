@@ -8,6 +8,7 @@ from app.model.job import JobModel
 from datetime import datetime, UTC
 from app.api.router_base import router_runpod as router
 from app.utility.storage import delete_from_supabase_storage
+from app.utility.time import utc_now
 
 
 @router.delete("/job/{job_id}")
@@ -24,7 +25,7 @@ async def delete_job(job_id: str, request: Request, db: AsyncSession = Depends(g
     )
     session = result.scalar_one_or_none()
 
-    if not session or (session.expires_at and session.expires_at < datetime.now(UTC)):
+    if not session or (session.expires_at and session.expires_at < utc_now()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expired or invalid"

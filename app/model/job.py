@@ -3,6 +3,8 @@ from datetime import datetime, UTC
 from app.db.database import Base
 import enum
 
+from app.utility.time import utc_now
+
 
 class JobStatus(str, enum.Enum):
     """Job processing status enumeration"""
@@ -25,7 +27,7 @@ class JobModel(Base):
     vertical = Column(Boolean, nullable=False, default=False)
     result_url = Column(String, nullable=True)
     error_message = Column(String, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime, nullable=False, default=lambda: utc_now())
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     runpod_job_id = Column(String, nullable=True)  # RunPod's internal job ID
