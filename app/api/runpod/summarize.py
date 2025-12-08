@@ -99,7 +99,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
                     "options": {
                         "method": body.method,
                         "vertical": body.vertical,
-                        "subtitle": body.subtitle,
+                        "subtitles": body.subtitle,
                     }
                 }
             },
