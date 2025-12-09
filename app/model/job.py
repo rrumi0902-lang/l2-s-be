@@ -29,3 +29,4 @@ class JobModel(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     runpod_job_id = Column(String, nullable=True)  # RunPod's internal job ID
     name = Column(String, nullable=False)
+    public = Column(Boolean, nullable=False, default=False)

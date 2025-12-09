@@ -54,7 +54,8 @@ async def get_job_my(request: Request, db: AsyncSession = Depends(get_db)):
             "subtitle": job.subtitle,
             "vertical": job.vertical,
             "status": job.status.value if hasattr(job.status, "value") else job.status,
-            "name": job.name
+            "name": job.name,
+            "public": job.public
         }
         for job in jobs
     ]

@@ -18,6 +18,7 @@ async def get_recent_videos(
         .join(UserModel, JobModel.user_id == UserModel.id)
         .join(VideoModel, JobModel.video_id == VideoModel.id)
         .where(JobModel.status == "completed")
+        .where(JobModel.public.is_(True))
         .order_by(JobModel.created_at.desc())
         .limit(limit)
     )
