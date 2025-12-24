@@ -1,0 +1,30 @@
+# EchoFusion RunPod Dependencies
+
+# Core
+torch>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+
+# Video Processing
+opencv-python>=4.8.0
+scenedetect[opencv]>=0.6.2
+ffmpeg-python>=0.2.0
+
+# Audio Processing
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# Speech Recognition
+faster-whisper>=0.10.0
+openai-whisper>=20231117
+
+# Computer Vision & NLP
+transformers>=4.35.0
+Pillow>=10.0.0
+
+# LLM Integration
+google-generativeai>=0.3.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
