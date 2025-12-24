@@ -9,8 +9,8 @@ async def lifespan(application: FastAPI):
     # Startup logic
     print("App starting up...")
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+# async with engine.begin() as conn:
+ #       await conn.run_sync(Base.metadata.create_all)
 
     start_cleanup_task()
     yield
