@@ -10,7 +10,7 @@ from app.model.video import VideoModel
 from app.model.job import JobModel, JobStatus
 from app.config.environments import RUNPOD_URL, RUNPOD_API_KEY, BACKEND_URL
 from app.api.router_base import router_runpod as router
-import requests
+import httpx
 from app.utility.time import utc_now
 
 
@@ -92,31 +92,31 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     await db.refresh(job)
 
     try:
-        # Use /runsync endpoint for synchronous execution
-        r = requests.post(
-            url=f"{RUNPOD_URL}/runsync",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {RUNPOD_API_KEY}"
-            },
-            json={
-                "input": {
-                    "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
-                    "task": "process_video",
-                    "video_url": video.file_path,
-                    "options": {
-                        "method": body.method,
-                        "subtitles": body.subtitle,
-                        "subtitle_style": body.subtitle_style,
-                        "vertical": body.vertical,
-                        "crop_method": body.crop_method,
+        # Use /runsync endpoint for synchronous execution with async httpx
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            response = await client.post(
+                url=f"{RUNPOD_URL}/runsync",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {RUNPOD_API_KEY}"
+                },
+                json={
+                    "input": {
+                        "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
+                        "task": "process_video",
+                        "video_url": video.file_path,
+                        "options": {
+                            "method": body.method,
+                            "subtitles": body.subtitle,
+                            "subtitle_style": body.subtitle_style,
+                            "vertical": body.vertical,
+                            "crop_method": body.crop_method,
+                        }
                     }
                 }
-            },
-            timeout=300  # Increased timeout for sync execution (5 minutes)
-        )
-
-        runpod_response = r.json()
+            )
+            response.raise_for_status()
+            runpod_response = response.json()
 
         if "id" in runpod_response:
             job.runpod_job_id = runpod_response["id"]
@@ -135,7 +135,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
             "message": "Job submitted successfully"
         }
 
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         job.status = JobStatus.FAILED
         job.error_message = f"Failed to submit job to RunPod: {str(e)}"
         await db.commit()
