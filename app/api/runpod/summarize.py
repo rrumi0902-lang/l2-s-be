@@ -92,8 +92,9 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     await db.refresh(job)
 
     try:
+        # Use /runsync endpoint for synchronous execution
         r = requests.post(
-            url=f"{RUNPOD_URL}/run",
+            url=f"{RUNPOD_URL}/runsync",
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {RUNPOD_API_KEY}"
@@ -112,7 +113,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
                     }
                 }
             },
-            timeout=30
+            timeout=300  # Increased timeout for sync execution (5 minutes)
         )
 
         runpod_response = r.json()
