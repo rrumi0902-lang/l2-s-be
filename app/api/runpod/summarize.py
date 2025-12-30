@@ -92,16 +92,18 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     await db.refresh(job)
 
     try:
-        # Use /runsync endpoint for synchronous execution with async httpx
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        # Use /run endpoint for ASYNC execution (returns job_id immediately)
+        # Webhook will notify when processing is complete
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                url=f"{RUNPOD_URL}/runsync",
+                url=f"{RUNPOD_URL}/run",
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {RUNPOD_API_KEY}"
                 },
                 json={
                     "input": {
+                        "job_id": str(job.id),
                         "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
                         "task": "process_video",
                         "video_url": video.file_path,
