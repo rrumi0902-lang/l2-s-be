@@ -206,6 +206,16 @@ class VisualHighlightDetector:
 class ImprovedEchoFusion:
     """개선된 EchoFusion 파이프라인"""
 
+    # 언어별 환청 방지 프롬프트
+    LANGUAGE_PROMPTS = {
+        "ko": "이 영상은 한국어입니다. 한국어로 정확하게 받아적어 주세요.",
+        "en": "This video is in English. Please transcribe accurately in English.",
+        "ja": "この動画は日本語です。日本語で正確に書き起こしてください。",
+        "zh": "这个视频是中文的。请用中文准确转录。",
+        "es": "Este video está en español. Por favor, transcribe con precisión en español.",
+        "auto": None,  # 자동 감지 시 프롬프트 없음
+    }
+
     def __init__(self):
         self.vad = VoiceActivityDetector()
         self.visual_detector = VisualHighlightDetector()
@@ -250,6 +260,10 @@ class ImprovedEchoFusion:
         try:
             logger.info(f"Processing video: {video_url}")
 
+            # 유저 선택 언어 추출 (기본값: auto)
+            language = (options or {}).get("language", "auto")
+            logger.info(f"User selected language: {language}")
+
             # 1. 영상 다운로드
             video_path = self._download_video(video_url)
 
@@ -271,29 +285,39 @@ class ImprovedEchoFusion:
             txt_scores = None
             txt_success = False
             processing_method = "unknown"
+            transcription = []  # 자막 저장용
 
             if has_speech and self.llm:
                 try:
-                    transcription = self._transcribe_audio(audio_path)
+                    # 유저 선택 언어로 Whisper 강제 적용
+                    transcription = self._transcribe_audio(audio_path, language=language)
 
                     if self.vad.is_hallucination(transcription, vad_result):
                         logger.warning("Whisper hallucination detected, skipping TXT")
+                        transcription = []  # 환각이면 자막 비우기
                     else:
                         txt_scores = self._calculate_txt_scores(transcription, scenes, target_duration)
                         txt_success = len(txt_scores) > 0
                 except Exception as e:
                     logger.error(f"TXT branch failed: {str(e)}")
 
-            # 7. 최종 점수 계산
+            # 7. 최종 점수 계산 및 메시지 결정 (자막 우선 원칙)
+            has_subtitles = len(transcription) > 0
+
             if txt_success and txt_scores:
                 final_scores = self._fuse_scores(hd_scores, txt_scores)
                 processing_method = "multimodal"
-                message = "Successfully generated highlights using multimodal fusion"
             else:
                 logger.warning("Falling back to visual-only detection")
                 final_scores = hd_scores
                 processing_method = "visual_only"
-                message = "Generated highlights using visual features only"
+
+            # 메시지 결정: 자막이 1개라도 있으면 "no speech detected" 삭제
+            if has_subtitles:
+                lang_display = language if language != "auto" else "detected"
+                message = f"[OK] Completed with subtitles. ({lang_display})"
+            else:
+                message = "[OK] Completed (Visual features only - no speech detected)"
 
             # 8. 상위 장면 선택
             timestamps = self._select_top_scenes(scenes, final_scores, target_duration)
@@ -311,15 +335,18 @@ class ImprovedEchoFusion:
             # 10. 결과 업로드
             result_url = self._upload_result(output_path)
 
-            # 11. Webhook 전송
+            # 11. Webhook 전송 (language 포함)
             webhook_payload = {
                 "status": "completed",
                 "result_url": result_url,
                 "processing_method": processing_method,
                 "message": message,
+                "language": language,  # DB 업데이트용
+                "has_subtitles": has_subtitles,
                 "metadata": {
                     "scene_count": len(scenes),
                     "selected_count": len(timestamps),
+                    "subtitle_count": len(transcription),
                     "vad_speech_ratio": vad_result["speech_ratio"],
                     "vad_energy_db": vad_result["energy_db"]
                 }
@@ -329,7 +356,8 @@ class ImprovedEchoFusion:
             return {
                 "status": "success",
                 "result_url": result_url,
-                "processing_method": processing_method
+                "processing_method": processing_method,
+                "language": language
             }
 
         except Exception as e:
@@ -393,13 +421,36 @@ class ImprovedEchoFusion:
 
         return scenes
 
-    def _transcribe_audio(self, audio_path: str) -> List[Dict]:
-        """Whisper 음성 인식"""
-        segments, _ = self.whisper_model.transcribe(
-            audio_path,
-            language="ko",
-            beam_size=5
-        )
+    def _transcribe_audio(self, audio_path: str, language: str = "auto") -> List[Dict]:
+        """
+        Whisper 음성 인식 - 유저 선택 언어 강제 적용
+
+        Args:
+            audio_path: 오디오 파일 경로
+            language: 유저가 선택한 언어 ("ko", "en", "ja", "zh", "es", "auto")
+        """
+        # 언어 설정: "auto"면 None (자동 감지), 아니면 강제 적용
+        whisper_language = None if language == "auto" else language
+
+        # 환청 방지 프롬프트
+        initial_prompt = self.LANGUAGE_PROMPTS.get(language)
+
+        logger.info(f"Whisper transcribe - language: {whisper_language}, prompt: {initial_prompt is not None}")
+
+        # Whisper 호출 (언어 강제 적용)
+        transcribe_kwargs = {
+            "beam_size": 5,
+        }
+
+        if whisper_language:
+            transcribe_kwargs["language"] = whisper_language
+
+        if initial_prompt:
+            transcribe_kwargs["initial_prompt"] = initial_prompt
+
+        segments, info = self.whisper_model.transcribe(audio_path, **transcribe_kwargs)
+
+        logger.info(f"Whisper detected language: {info.language} (prob: {info.language_probability:.2f})")
 
         transcription = []
         for segment in segments:
