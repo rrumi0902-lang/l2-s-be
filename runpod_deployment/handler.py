@@ -14,11 +14,17 @@ import sys
 import logging
 import json
 import subprocess
+import uuid
 from typing import List, Dict, Tuple, Optional
 import numpy as np
 import torch
 import requests
 from pathlib import Path
+
+# Supabase 환경 변수
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://margsytrpcmtrygpkaiy.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+SUPABASE_BUCKET = "outputs"
 
 # 로깅 설정
 logging.basicConfig(
@@ -672,10 +678,39 @@ class ImprovedEchoFusion:
         return output_path
 
     def _upload_result(self, file_path: str) -> str:
-        """결과 파일 업로드 (Supabase 등)"""
-        # TODO: 실제 업로드 로직 구현
-        # 여기서는 임시로 로컬 경로 반환
-        return f"https://storage.example.com/result_{Path(file_path).name}"
+        """결과 파일을 Supabase Storage에 업로드"""
+        try:
+            if not SUPABASE_KEY:
+                logger.error("SUPABASE_KEY not set, cannot upload result")
+                raise RuntimeError("SUPABASE_KEY environment variable not set")
+
+            # 고유한 파일명 생성
+            file_ext = Path(file_path).suffix
+            unique_filename = f"{uuid.uuid4()}{file_ext}"
+
+            # Supabase Storage REST API로 업로드
+            upload_url = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{unique_filename}"
+
+            with open(file_path, "rb") as f:
+                file_data = f.read()
+
+            headers = {
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": "video/mp4" if file_ext == ".mp4" else "application/octet-stream",
+            }
+
+            response = requests.post(upload_url, headers=headers, data=file_data, timeout=300)
+            response.raise_for_status()
+
+            # 공개 URL 생성
+            public_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{unique_filename}"
+            logger.info(f"Result uploaded successfully: {public_url}")
+
+            return public_url
+
+        except Exception as e:
+            logger.error(f"Failed to upload result: {str(e)}")
+            raise RuntimeError(f"Failed to upload result to Supabase: {str(e)}")
 
     def _send_webhook(self, webhook_url: str, payload: Dict):
         """Webhook 전송"""
@@ -726,18 +761,5 @@ def handler(event):
         return {"status": "error", "message": str(e)}
 
 
-if __name__ == "__main__":
-    # 로컬 테스트
-    test_event = {
-        "input": {
-            "webhook_url": "http://localhost:8080/runpod/webhook/1",
-            "task": "process_video",
-            "video_url": "https://example.com/video.mp4",
-            "options": {
-                "target_duration": 60
-            }
-        }
-    }
-
-    result = handler(test_event)
-    print(json.dumps(result, indent=2))
+# RunPod Serverless 시작점
+# 참고: RunPod은 handler 함수를 직접 호출하므로 별도의 시작 코드가 필요 없음
