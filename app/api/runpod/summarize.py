@@ -86,6 +86,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
         subtitle_style=body.subtitle_style,
         vertical=body.vertical,
         crop_method=body.crop_method,
+        language=body.language,  # Store language setting (None = no audio)
         name="Pending Job"
     )
     db.add(job)
