@@ -21,7 +21,7 @@ class SummarizeRequest(BaseModel):
     subtitle_style: Optional[Literal["casual", "dynamic"]] = None
     vertical: bool
     crop_method: Optional[Literal["blur", "center"]] = None
-    language: Literal["auto", "ko", "en", "es", "zh"] = "auto"
+    language: Optional[Literal["auto", "ko", "en", "es", "zh"]] = None
 
 
 @router.post("/summarize")
