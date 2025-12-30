@@ -21,6 +21,7 @@ class SummarizeRequest(BaseModel):
     subtitle_style: Optional[Literal["casual", "dynamic"]] = None
     vertical: bool
     crop_method: Optional[Literal["blur", "center"]] = None
+    language: Literal["auto", "ko", "en", "es", "zh"] = "auto"
 
 
 @router.post("/summarize")
@@ -113,6 +114,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
                             "subtitle_style": body.subtitle_style,
                             "vertical": body.vertical,
                             "crop_method": body.crop_method,
+                            "language": body.language,
                         }
                     }
                 }
