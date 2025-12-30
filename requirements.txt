@@ -12,5 +12,6 @@ yt-dlp
 psycopg2-binary
 supabase
 requests
+httpx
 asyncpg
 greenlet

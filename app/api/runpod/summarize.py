@@ -10,7 +10,7 @@ from app.model.video import VideoModel
 from app.model.job import JobModel, JobStatus
 from app.config.environments import RUNPOD_URL, RUNPOD_API_KEY, BACKEND_URL
 from app.api.router_base import router_runpod as router
-import requests
+import httpx
 from app.utility.time import utc_now
 
 
@@ -21,6 +21,7 @@ class SummarizeRequest(BaseModel):
     subtitle_style: Optional[Literal["casual", "dynamic"]] = None
     vertical: bool
     crop_method: Optional[Literal["blur", "center"]] = None
+    language: Optional[Literal["auto", "ko", "en", "es", "zh"]] = None
 
 
 @router.post("/summarize")
@@ -85,6 +86,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
         subtitle_style=body.subtitle_style,
         vertical=body.vertical,
         crop_method=body.crop_method,
+        language=body.language,  # Store language setting (None = no audio)
         name="Pending Job"
     )
     db.add(job)
@@ -92,30 +94,34 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     await db.refresh(job)
 
     try:
-        r = requests.post(
-            url=f"{RUNPOD_URL}/run",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {RUNPOD_API_KEY}"
-            },
-            json={
-                "input": {
-                    "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
-                    "task": "process_video",
-                    "video_url": video.file_path,
-                    "options": {
-                        "method": body.method,
-                        "subtitles": body.subtitle,
-                        "subtitle_style": body.subtitle_style,
-                        "vertical": body.vertical,
-                        "crop_method": body.crop_method,
+        # Use /run endpoint for ASYNC execution (returns job_id immediately)
+        # Webhook will notify when processing is complete
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url=f"{RUNPOD_URL}/run",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {RUNPOD_API_KEY}"
+                },
+                json={
+                    "input": {
+                        "job_id": str(job.id),
+                        "webhook_url": f"{BACKEND_URL}/runpod/webhook/{job.id}",
+                        "task": "process_video",
+                        "video_url": video.file_path,
+                        "options": {
+                            "method": body.method,
+                            "subtitles": body.subtitle,
+                            "subtitle_style": body.subtitle_style,
+                            "vertical": body.vertical,
+                            "crop_method": body.crop_method,
+                            "language": body.language,
+                        }
                     }
                 }
-            },
-            timeout=30
-        )
-
-        runpod_response = r.json()
+            )
+            response.raise_for_status()
+            runpod_response = response.json()
 
         if "id" in runpod_response:
             job.runpod_job_id = runpod_response["id"]
@@ -134,7 +140,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
             "message": "Job submitted successfully"
         }
 
-    except requests.exceptions.RequestException as e:
+    except httpx.HTTPError as e:
         job.status = JobStatus.FAILED
         job.error_message = f"Failed to submit job to RunPod: {str(e)}"
         await db.commit()

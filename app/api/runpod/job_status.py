@@ -72,4 +72,5 @@ async def get_job_status(job_id: str, request: Request, db: AsyncSession = Depen
         "public": job.public,
         "subtitle_style": job.subtitle_style,
         "crop_method": job.crop_method,
+        "language": job.language,  # None = no audio video
     }
