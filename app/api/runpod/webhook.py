@@ -39,6 +39,10 @@ async def runpod_webhook(job_id: str, request: Request, db: AsyncSession = Depen
         detail_message = payload.get("message", "")
         metadata = payload.get("metadata", {})
 
+        # New fields for subtitle-aware message logic
+        has_subtitles = payload.get("has_subtitles", False)
+        detected_language = payload.get("language", None)
+
         if not job_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -57,7 +61,7 @@ async def runpod_webhook(job_id: str, request: Request, db: AsyncSession = Depen
                 detail=f"Job {job_id} not found"
             )
 
-        logger.info(f"Webhook received for job {job_id}: status={webhook_status}, method={processing_method}")
+        logger.info(f"Webhook received for job {job_id}: status={webhook_status}, method={processing_method}, has_subtitles={has_subtitles}")
 
         # Process by status
         if webhook_status == "completed":
@@ -65,24 +69,24 @@ async def runpod_webhook(job_id: str, request: Request, db: AsyncSession = Depen
             job.result_url = result_url
             job.completed_at = datetime.now(UTC)
 
-            # Set message based on processing method
-            if processing_method == "visual_only":
-                job.error_message = "[OK] Completed (Visual features only - no speech detected)"
-                logger.info(f"Job {job_id} completed with visual-only processing")
+            # Message priority: has_subtitles > processing_method
+            # If subtitles exist, show clean success message (ignore "no speech detected")
+            if has_subtitles:
+                lang_display = detected_language if detected_language and detected_language != "auto" else "detected"
+                job.error_message = f"[OK] Completed with subtitles ({lang_display})"
+                logger.info(f"Job {job_id} completed with subtitles (lang: {lang_display})")
+            elif processing_method == "visual_only":
+                # Only show "no speech detected" when no subtitles were generated
+                job.error_message = "[OK] Visual features only - no speech detected"
+                logger.info(f"Job {job_id} completed with visual-only processing (no subtitles)")
             elif processing_method == "text_only":
                 job.error_message = "[OK] Completed (Text analysis only)"
             elif processing_method == "multimodal":
                 job.error_message = None  # Normal completion, no error
                 logger.info(f"Job {job_id} completed with multimodal fusion")
             else:
-                # Default case
-                job.error_message = None
-
-            # Append detailed message if exists
-            if detail_message and job.error_message:
-                job.error_message += f" - {detail_message}"
-            elif detail_message and not job.error_message:
-                job.error_message = detail_message
+                # Default case - use detail_message if available
+                job.error_message = detail_message if detail_message else None
 
         elif webhook_status == "partial":
             # Partial success (e.g., TXT failed but HD succeeded)
@@ -120,6 +124,7 @@ async def runpod_webhook(job_id: str, request: Request, db: AsyncSession = Depen
             "job_id": job_id,
             "status": job.status,
             "processing_method": processing_method,
+            "has_subtitles": has_subtitles,
             "result_url": result_url
         }
 
