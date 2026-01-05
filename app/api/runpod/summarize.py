@@ -23,7 +23,7 @@ class SummarizeRequest(BaseModel):
     subtitle: bool
     subtitle_style: Optional[Literal["casual", "dynamic"]] = None
     vertical: bool
-    crop_method: Optional[Literal["blur", "center"]] = None
+    crop_method: Optional[Literal["center", "fit"]] = None
     language: Optional[Literal["auto", "ko", "en", "es", "zh"]] = None
     target_duration: Optional[Union[Literal["auto"], int]] = "auto"  # "auto", 30, or 60
 
