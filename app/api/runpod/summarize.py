@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, status, Depends
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.dependency import get_db
@@ -11,7 +11,10 @@ from app.model.job import JobModel, JobStatus
 from app.config.environments import RUNPOD_URL, RUNPOD_API_KEY, BACKEND_URL
 from app.api.router_base import router_runpod as router
 import httpx
+import logging
 from app.utility.time import utc_now
+
+logger = logging.getLogger(__name__)
 
 
 class SummarizeRequest(BaseModel):
@@ -22,6 +25,7 @@ class SummarizeRequest(BaseModel):
     vertical: bool
     crop_method: Optional[Literal["blur", "center"]] = None
     language: Optional[Literal["auto", "ko", "en", "es", "zh"]] = None
+    target_duration: Optional[Union[Literal["auto"], int]] = "auto"  # "auto", 30, or 60
 
 
 @router.post("/summarize")
@@ -77,6 +81,9 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
     if body.crop_method is None:
         body.crop_method = "center"
 
+    # Log target_duration for debugging
+    logger.info(f"Summarize request for video {body.video_id}: target_duration={body.target_duration}")
+
     job = JobModel(
         user_id=user.id,
         video_id=video.id,
@@ -116,6 +123,7 @@ async def summarize(request: Request, body: SummarizeRequest, db: AsyncSession =
                             "vertical": body.vertical,
                             "crop_method": body.crop_method,
                             "language": body.language,
+                            "target_duration": body.target_duration,
                         }
                     }
                 }
