@@ -32,3 +32,4 @@ class JobModel(Base):
     public = Column(Boolean, nullable=False, default=False)
     subtitle_style = Column(String, nullable=True)
     crop_method = Column(String, nullable=True)
+    language = Column(String, nullable=True)  # "auto", "ko", "en", "es", "zh" or None (no audio)

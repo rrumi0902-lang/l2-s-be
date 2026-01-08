@@ -58,6 +58,7 @@ async def get_job_my(request: Request, db: AsyncSession = Depends(get_db)):
             "public": job.public,
             "subtitle_style": job.subtitle_style,
             "crop_method": job.crop_method,
+            "language": job.language,  # None = no audio video
         }
         for job in jobs
     ]
